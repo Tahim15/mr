@@ -1,13 +1,30 @@
 import asyncio
+import json
+import os
 import requests
 from bs4 import BeautifulSoup
-from config import LOGGER, CHECK_INTERVAL, CHANNEL_ID
 from pyrogram import Client
+from config import LOGGER, CHECK_INTERVAL, CHANNEL_ID
 
 BASE_URL = "https://www.5movierulz.tel/"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36"
 }
+
+MOVIES_FILE = "data/movies.json"
+
+def load_processed_movies():
+    if os.path.exists(MOVIES_FILE):
+        with open(MOVIES_FILE, "r", encoding="utf-8") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return []
+    return []
+
+def save_processed_movies(movies):
+    with open(MOVIES_FILE, "w", encoding="utf-8") as f:
+        json.dump(movies, f, indent=4, ensure_ascii=False)
 
 def get_recent_movies():
     response = requests.get(BASE_URL, headers=HEADERS)
@@ -48,6 +65,8 @@ def get_magnet_links(movie_url):
     return [a["href"] for a in soup.select('a[href^="magnet:?xt="]')]
 
 async def check_new_movies(client: Client):
+    processed_movies = load_processed_movies()
+
     while True:
         LOGGER(__name__).info("Checking for new movies...")
         movies = get_recent_movies()
@@ -56,12 +75,17 @@ async def check_new_movies(client: Client):
             LOGGER(__name__).info("No recent movies found.")
         else:
             for movie in movies:
+                if movie["url"] in processed_movies:
+                    LOGGER(__name__).info(f"Skipping already processed movie: {movie['title']}")
+                    continue
+
                 magnets = get_magnet_links(movie["url"])
                 if magnets:
-                    message = f"<b>🎬 {movie['title']}</b>\n\n🔗 <a href='{movie['url']}'>Watch Here</a>\n\n"
-                    message += "\n".join([f"<code>{link}</code>" for link in magnets])
-                    await client.send_message(CHANNEL_ID, message, disable_web_page_preview=True)
-                else:
-                    LOGGER(__name__).info(f"No magnet links found for {movie['title']}")
+                    for link in magnets:
+                        message = f"/ql {link}\n<b>Tag:</b> <code>@Mr_official_300</code> <code>2142536515</code>"
+                        await client.send_message(CHANNEL_ID, message, disable_web_page_preview=True)
+
+                    processed_movies.append(movie["url"])
+                    save_processed_movies(processed_movies)
 
         await asyncio.sleep(CHECK_INTERVAL)
