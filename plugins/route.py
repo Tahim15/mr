@@ -1,6 +1,7 @@
-from pyrogram import Client
-from config import LOGGER
+from flask import Flask
 
-async def some_plugin_function(client: Client, message):
-    LOGGER(__name__).info(f"Received message: {message.text}")
-    await message.reply_text("This is a plugin response!")
+app = Flask(__name__)
+
+@app.route('/')
+def health_check():
+    return "OK", 200
