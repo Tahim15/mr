@@ -1,0 +1,6 @@
+*.pyc
+__pycache__/
+env/
+venv/
+config.py
+filesharingbot.txt
