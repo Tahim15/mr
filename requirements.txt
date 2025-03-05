@@ -1,5 +1,5 @@
-aiohttp
-beautifulsoup4
 pyrogram
-tgcrypto
 requests
+beautifulsoup4
+flask
+gunicorn
